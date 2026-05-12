@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src 'self' blob: data:;">
+  <title>番茄时钟 - Pomodoro Timer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 标题区域 -->
+    <header class="header">
+      <h1 class="title">🍅 番茄时钟</h1>
+      <p class="subtitle">保持专注，高效工作</p>
+    </header>
+
+    <!-- 模式选择 -->
+    <div class="mode-selector">
+      <button class="mode-btn active" data-mode="focus">
+        <span class="mode-icon">🎯</span>
+        <span class="mode-text">专注</span>
+      </button>
+      <button class="mode-btn" data-mode="shortBreak">
+        <span class="mode-icon">☕</span>
+        <span class="mode-text">短休息</span>
+      </button>
+      <button class="mode-btn" data-mode="longBreak">
+        <span class="mode-icon">🌴</span>
+        <span class="mode-text">长休息</span>
+      </button>
+    </div>
+
+    <!-- 计时器显示 -->
+    <div class="timer-container">
+      <svg class="timer-ring" viewBox="0 0 200 200">
+        <circle class="timer-ring-bg" cx="100" cy="100" r="90" />
+        <circle class="timer-ring-progress" cx="100" cy="100" r="90" id="progressRing" />
+      </svg>
+      <div class="timer-display">
+        <span class="timer-time" id="timerDisplay">25:00</span>
+        <span class="timer-label" id="timerLabel">专注时间</span>
+      </div>
+    </div>
+
+    <!-- 控制按钮 -->
+    <div class="controls">
+      <button class="control-btn reset-btn" id="resetBtn" title="重置">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+      </button>
+      
+      <button class="control-btn play-btn" id="playBtn" title="开始">
+        <svg viewBox="0 0 24 24" fill="currentColor" id="playIcon">
+          <polygon points="5 3 19 12 5 21 5 3"/>
+        </svg>
+        <svg viewBox="0 0 24 24" fill="currentColor" id="pauseIcon" style="display: none;">
+          <rect x="6" y="4" width="4" height="16"/>
+          <rect x="14" y="4" width="4" height="16"/>
+        </svg>
+      </button>
+      
+      <button class="control-btn skip-btn" id="skipBtn" title="跳过">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5 4 15 12 5 20 5 4"/>
+          <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- 统计信息 -->
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-value" id="completedPomodoros">0</span>
+        <span class="stat-label">完成专注</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="totalFocusTime">0</span>
+        <span class="stat-label">总专注(分钟)</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="currentStreak">0</span>
+        <span class="stat-label">连续天数</span>
+      </div>
+    </div>
+
+    <!-- 设置面板 -->
+    <div class="settings-panel">
+      <button class="settings-toggle" id="settingsToggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+        </svg>
+        <span>自定义设置</span>
+      </button>
+      
+      <div class="settings-content" id="settingsContent">
+        <div class="setting-item">
+          <label for="focusDuration">专注时长 (分钟)</label>
+          <div class="setting-input-group">
+            <button class="setting-adjust" data-target="focusDuration" data-delta="-1">-</button>
+            <input type="number" id="focusDuration" value="25" min="1" max="60">
+            <button class="setting-adjust" data-target="focusDuration" data-delta="1">+</button>
+          </div>
+        </div>
+        
+        <div class="setting-item">
+          <label for="shortBreakDuration">短休息时长 (分钟)</label>
+          <div class="setting-input-group">
+            <button class="setting-adjust" data-target="shortBreakDuration" data-delta="-1">-</button>
+            <input type="number" id="shortBreakDuration" value="5" min="1" max="30">
+            <button class="setting-adjust" data-target="shortBreakDuration" data-delta="1">+</button>
+          </div>
+        </div>
+        
+        <div class="setting-item">
+          <label for="longBreakDuration">长休息时长 (分钟)</label>
+          <div class="setting-input-group">
+            <button class="setting-adjust" data-target="longBreakDuration" data-delta="-1">-</button>
+            <input type="number" id="longBreakDuration" value="15" min="1" max="60">
+            <button class="setting-adjust" data-target="longBreakDuration" data-delta="1">+</button>
+          </div>
+        </div>
+        
+        <div class="setting-item">
+          <label for="longBreakInterval">长休息间隔 (个番茄)</label>
+          <div class="setting-input-group">
+            <button class="setting-adjust" data-target="longBreakInterval" data-delta="-1">-</button>
+            <input type="number" id="longBreakInterval" value="4" min="2" max="10">
+            <button class="setting-adjust" data-target="longBreakInterval" data-delta="1">+</button>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label for="soundEnabled">
+            <input type="checkbox" id="soundEnabled" checked>
+            启用音效提醒
+          </label>
+        </div>
+
+        <div class="setting-item">
+          <label for="autoStartBreaks">
+            <input type="checkbox" id="autoStartBreaks">
+            休息时自动开始
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 提示信息 -->
+    <div class="tip" id="tip">
+      💡 快捷键: Ctrl+Shift+P 显示/隐藏 | Ctrl+Shift+S 开始/暂停
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

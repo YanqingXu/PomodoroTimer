@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e94560"/>
+      <stop offset="100%" style="stop-color:#ff6b8a"/>
+    </linearGradient>
+  </defs>
+  <!-- 番茄形状背景 -->
+  <circle cx="128" cy="128" r="120" fill="url(#bg)"/>
+  <!-- 番茄顶部 -->
+  <path d="M118 25 Q128 10 138 25 Q135 35 128 40 Q121 35 118 25" fill="#4ade80"/>
+  <path d="M128 40 L128 50 Q140 45 145 35" stroke="#4ade80" stroke-width="4" fill="none"/>
+  <!-- 番茄身体高光 -->
+  <ellipse cx="100" cy="100" rx="30" ry="40" fill="rgba(255,255,255,0.2)"/>
+  <!-- 时钟刻度 -->
+  <g stroke="white" stroke-width="6" stroke-linecap="round">
+    <!-- 12点 -->
+    <line x1="128" y1="70" x2="128" y2="85"/>
+    <!-- 3点 -->
+    <line x1="186" y1="128" x2="171" y2="128"/>
+    <!-- 6点 -->
+    <line x1="128" y1="186" x2="128" y2="171"/>
+    <!-- 9点 -->
+    <line x1="70" y1="128" x2="85" y2="128"/>
+  </g>
+  <!-- 时针 -->
+  <line x1="128" y1="128" x2="128" y2="95" stroke="white" stroke-width="8" stroke-linecap="round"/>
+  <!-- 分针 -->
+  <line x1="128" y1="128" x2="155" y2="128" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <!-- 中心点 -->
+  <circle cx="128" cy="128" r="8" fill="white"/>
+</svg>
