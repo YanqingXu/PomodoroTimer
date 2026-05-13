@@ -5,3 +5,44 @@ release/
 *.log
 .DS_Store
 Thumbs.db
+
+# Dependency directories
+bower_components/
+
+# Build artifacts
+build/
+coverage/
+*.tgz
+
+# Electron and installer outputs
+*.exe
+*.msi
+*.nupkg
+*.appx
+*.appxbundle
+*.blockmap
+latest*.yml
+
+# Caches and temp files
+.cache/
+.eslintcache
+.parcel-cache/
+.turbo/
+tmp/
+temp/
+
+# Environment and local config
+.env
+.env.*
+!.env.example
+
+# IDE and editor files
+.idea/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
