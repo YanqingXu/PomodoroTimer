@@ -39,7 +39,8 @@
       </svg>
       <div class="timer-display">
         <span class="timer-time" id="timerDisplay">25:00</span>
-        <span class="timer-label" id="timerLabel">专注时间</span>
+        <span class="timer-label" id="timerLabel" title="点击设置当前任务">专注时间</span>
+        <input type="text" class="timer-label-input" id="timerLabelInput" maxlength="30" autocomplete="off" style="display:none;">
       </div>
     </div>
 
@@ -145,6 +146,14 @@
             <input type="checkbox" id="autoStartBreaks">
             休息时自动开始
           </label>
+        </div>
+
+        <div class="setting-item">
+          <label for="overlayOpacity">悬浮窗透明度</label>
+          <div class="setting-input-group">
+            <input type="range" id="overlayOpacity" min="30" max="100" value="85" step="5">
+            <span class="setting-range-value" id="overlayOpacityValue">85%</span>
+          </div>
         </div>
       </div>
     </div>

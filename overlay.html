@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>Overlay</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+      font-family: 'Segoe UI', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+    }
+
+    #container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      background: rgba(15, 15, 30, 0.85);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    #progressTrack {
+      height: 3px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+    }
+
+    #progressBar {
+      height: 3px;
+      background: #e94560;
+      border-radius: 0 2px 2px 0;
+      transition: width 0.5s ease, background 0.3s ease;
+      width: 100%;
+    }
+
+    #content {
+      display: flex;
+      align-items: center;
+      padding: 6px 12px 7px;
+      gap: 10px;
+      min-width: 0;
+      position: relative;
+    }
+
+    #modeIcon {
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    #timerText {
+      font-size: 18px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #ffffff;
+      flex-shrink: 0;
+      letter-spacing: 1px;
+    }
+
+    #taskText {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* 两个透明覆盖层，浮于内容之上 */
+    #dragLayer,
+    #clickLayer {
+      position: absolute;
+      top: 3px;   /* 进度条以下 */
+      bottom: 0;
+      z-index: 10;
+      background: transparent;
+    }
+
+    #dragLayer {
+      left: 0;
+      width: 50%;
+      -webkit-app-region: drag;
+    }
+
+    #clickLayer {
+      right: 0;
+      width: 50%;
+      -webkit-app-region: no-drag;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="progressTrack">
+      <div id="progressBar"></div>
+    </div>
+    <div id="content">
+      <span id="modeIcon">🍅</span>
+      <span id="timerText">25:00</span>
+      <span id="taskText"></span>
+      <!-- 透明覆盖层 -->
+      <div id="dragLayer"></div>
+      <div id="clickLayer"></div>
+    </div>
+  </div>
+  <script>
+    var el = {
+      progressBar: document.getElementById('progressBar'),
+      modeIcon: document.getElementById('modeIcon'),
+      timerText: document.getElementById('timerText'),
+      taskText: document.getElementById('taskText'),
+      container: document.getElementById('container')
+    };
+
+    var modeIcons = { focus: '🎯', shortBreak: '☕', longBreak: '🌴' };
+    var modeColors = { focus: '#e94560', shortBreak: '#00d9ff', longBreak: '#7c3aed' };
+
+    function applyOpacity(opacity) {
+      el.container.style.background = 'rgba(15, 15, 30, ' + opacity + ')';
+    }
+
+    window.overlayAPI.onUpdate(function (data) {
+      el.timerText.textContent = data.time;
+      el.progressBar.style.width = (data.progress * 100) + '%';
+      el.progressBar.style.background = modeColors[data.mode] || modeColors.focus;
+      el.modeIcon.textContent = modeIcons[data.mode] || modeIcons.focus;
+      el.taskText.textContent = data.taskName || '';
+    });
+
+    window.overlayAPI.onSettings(function (data) {
+      if (data.opacity !== undefined) {
+        applyOpacity(data.opacity);
+      }
+    });
+
+    document.getElementById('clickLayer').addEventListener('dblclick', function () {
+      window.overlayAPI.showMain();
+    });
+  </script>
+</body>
+</html>

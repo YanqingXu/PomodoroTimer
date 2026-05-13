@@ -7,6 +7,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // 显示系统通知
   showNotification: (title, body) => ipcRenderer.send('show-notification', { title, body }),
+
+  // 悬浮窗更新
+  updateOverlay: (data) => ipcRenderer.send('update-overlay', data),
+  updateOverlaySettings: (data) => ipcRenderer.send('update-overlay-settings', data),
   
   // 监听托盘控制事件
   onTrayToggle: (callback) => ipcRenderer.on('tray-toggle', callback),

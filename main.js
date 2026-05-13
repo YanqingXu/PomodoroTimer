@@ -9,6 +9,7 @@ log.info('应用程序启动');
 
 // 全局变量
 let mainWindow = null;
+let overlayWindow = null;
 let tray = null;
 let isQuitting = false;
 
@@ -51,9 +52,75 @@ function createWindow() {
     }
   });
 
+  mainWindow.on('hide', () => {
+    createOverlay();
+  });
+
+  mainWindow.on('show', () => {
+    destroyOverlay();
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+}
+
+// 创建桌面悬浮窗
+function createOverlay() {
+  if (overlayWindow) return;
+
+  const { screen } = require('electron');
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenW, height: screenH } = primaryDisplay.workAreaSize;
+
+  overlayWindow = new BrowserWindow({
+    width: 240,
+    height: 50,
+    x: screenW - 260,
+    y: screenH - 80,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    show: false,
+    hasShadow: false,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: path.join(__dirname, 'overlay-preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false
+    }
+  });
+
+  overlayWindow.loadFile('overlay.html');
+  overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
+  overlayWindow.once('ready-to-show', () => {
+    overlayWindow.show();
+  });
+
+  overlayWindow.on('closed', () => {
+    ipcMain.removeAllListeners('overlay-show-main');
+    overlayWindow = null;
+  });
+
+  // 双击悬浮窗恢复主窗口
+  ipcMain.on('overlay-show-main', () => {
+    if (mainWindow) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+function destroyOverlay() {
+  if (overlayWindow) {
+    ipcMain.removeAllListeners('overlay-show-main');
+    overlayWindow.close();
+    overlayWindow = null;
+  }
 }
 
 // 创建系统托盘
@@ -188,6 +255,18 @@ ipcMain.on('show-notification', (event, { title, body }) => {
   }
 });
 
+ipcMain.on('update-overlay', (event, data) => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('overlay-update', data);
+  }
+});
+
+ipcMain.on('update-overlay-settings', (event, data) => {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.webContents.send('overlay-settings', data);
+  }
+});
+
 // 应用就绪
 app.whenReady().then(() => {
   log.info('应用就绪');
@@ -212,6 +291,7 @@ app.on('activate', () => {
 
 // 退出前清理
 app.on('will-quit', () => {
+  destroyOverlay();
   globalShortcut.unregisterAll();
   log.info('应用程序退出');
 });

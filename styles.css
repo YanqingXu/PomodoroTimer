@@ -168,6 +168,14 @@ body {
   font-size: 14px;
   color: var(--text-secondary);
   margin-top: 4px;
+  cursor: pointer;
+  padding: 2px 1px;
+  border-bottom: 1px dashed transparent;
+  transition: var(--transition);
+}
+
+.timer-label:hover {
+  border-bottom-color: var(--text-muted);
 }
 
 /* 控制按钮 */
@@ -369,6 +377,56 @@ body {
 .setting-adjust:hover {
   background: var(--accent-focus);
   color: white;
+}
+
+.setting-item input[type="range"] {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-card);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.setting-item input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-focus);
+  cursor: pointer;
+  border: 2px solid var(--bg-primary);
+  box-shadow: 0 0 6px rgba(233, 69, 96, 0.4);
+}
+
+.setting-range-value {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* 内联任务编辑 */
+.timer-label-input {
+  display: block;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  text-align: center;
+  outline: none;
+  width: 180px;
+  margin: 4px auto 0;
+  border-bottom: 1px solid var(--accent-focus);
+}
+
+.timer-label-input::placeholder {
+  color: var(--text-muted);
 }
 
 /* 提示信息 */

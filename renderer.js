@@ -16,7 +16,9 @@ const state = {
   runningStartedAt: null,
   runningStartedWallTime: null,
   runningStartedTimeLeft: null,
-  
+  taskName: '',
+  sessions: [],
+
   // 设置
   settings: {
     focusDuration: 25,
@@ -24,7 +26,8 @@ const state = {
     longBreakDuration: 15,
     longBreakInterval: 4,
     soundEnabled: true,
-    autoStartBreaks: false
+    autoStartBreaks: false,
+    overlayOpacity: 0.85
   }
 };
 
@@ -58,9 +61,14 @@ const elements = {
   longBreakInterval: document.getElementById('longBreakInterval'),
   soundEnabled: document.getElementById('soundEnabled'),
   autoStartBreaks: document.getElementById('autoStartBreaks'),
+  overlayOpacity: document.getElementById('overlayOpacity'),
+  overlayOpacityValue: document.getElementById('overlayOpacityValue'),
   
   // 托盘提示
-  tip: document.getElementById('tip')
+  tip: document.getElementById('tip'),
+
+  // 任务
+  timerLabelInput: document.getElementById('timerLabelInput')
 };
 
 // ==================== 定时器 ====================
@@ -77,6 +85,7 @@ function init() {
   updateDisplay();
   updateTimerRing();
   updateStats();
+  sendOverlaySettings();
   if (pendingCompletionAfterLoad) {
     pendingCompletionAfterLoad = false;
     onTimerComplete();
@@ -103,6 +112,8 @@ function loadState() {
       state.activeSessionMinutes = Number.isFinite(parsed.activeSessionMinutes)
         ? parsed.activeSessionMinutes
         : Math.round(state.totalTime / 60);
+      state.taskName = parsed.taskName || '';
+      state.sessions = Array.isArray(parsed.sessions) ? parsed.sessions : [];
       
       // 更新设置控件
       elements.focusDuration.value = state.settings.focusDuration;
@@ -111,6 +122,7 @@ function loadState() {
       elements.longBreakInterval.value = state.settings.longBreakInterval;
       elements.soundEnabled.checked = state.settings.soundEnabled;
       elements.autoStartBreaks.checked = state.settings.autoStartBreaks;
+      if (elements.overlayOpacity) elements.overlayOpacity.value = state.settings.overlayOpacity;
 
       restoreModeUi();
       restoreRunningTimer(parsed);
@@ -139,7 +151,9 @@ function saveState() {
       completedPomodoros: state.completedPomodoros,
       totalFocusMinutes: state.totalFocusMinutes,
       currentStreak: state.currentStreak,
-      lastCompletionDate: state.lastCompletionDate
+      lastCompletionDate: state.lastCompletionDate,
+      taskName: state.taskName,
+      sessions: state.sessions.slice(-200)
     };
     localStorage.setItem('pomodoroState', JSON.stringify(toSave));
   } catch (e) {
@@ -233,6 +247,7 @@ function setupEventListeners() {
   elements.longBreakInterval.addEventListener('change', (e) => updateSetting('longBreakInterval', e.target.value));
   elements.soundEnabled.addEventListener('change', (e) => updateSetting('soundEnabled', e.target.checked));
   elements.autoStartBreaks.addEventListener('change', (e) => updateSetting('autoStartBreaks', e.target.checked));
+  elements.overlayOpacity.addEventListener('input', (e) => { updateOverlayOpacity(e.target.value); });
   
   // 设置调整按钮
   document.querySelectorAll('.setting-adjust').forEach(btn => {
@@ -246,6 +261,28 @@ function setupEventListeners() {
     });
   });
   
+  // 任务名称 - 点击标签编辑
+  elements.timerLabel.addEventListener('click', () => {
+    if (state.mode === 'focus' && !state.isRunning) {
+      startEditingLabel();
+    }
+  });
+
+  elements.timerLabelInput.addEventListener('blur', () => {
+    commitLabelEdit();
+  });
+
+  elements.timerLabelInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      elements.timerLabelInput.blur();
+    }
+    if (e.key === 'Escape') {
+      elements.timerLabelInput.value = state.taskName;
+      elements.timerLabelInput.blur();
+    }
+  });
+
   // 键盘快捷键
   document.addEventListener('keydown', handleKeydown);
 }
@@ -315,6 +352,7 @@ function startTimer() {
   clearInterval(timerInterval);
   timerInterval = setInterval(tick, 1000);
   updateTrayTooltip();
+  sendOverlayUpdate();
   saveState();
   log('计时器已启动');
 }
@@ -336,6 +374,7 @@ function pauseTimer() {
   elements.timerContainer.classList.remove('running');
   
   updateTrayTooltip();
+  sendOverlayUpdate();
   saveState();
   log('计时器已暂停');
 }
@@ -345,6 +384,7 @@ function resetTimer() {
   setDurationForMode(state.mode);
   updateDisplay();
   updateTimerRing();
+  sendOverlayUpdate();
   saveState();
   log('计时器已重置');
 }
@@ -358,6 +398,7 @@ function tick() {
   updateDisplay();
   updateTimerRing();
   updateTrayTooltip();
+  sendOverlayUpdate();
 
   if (state.timeLeft <= 0) {
     onTimerComplete();
@@ -388,6 +429,7 @@ function completeCurrentMode(shouldCountCompletion) {
       state.completedPomodoros++;
       state.totalFocusMinutes += completedDurationMinutes;
       state.lastCompletionDate = new Date().toDateString();
+      recordFocusSession(completedDurationMinutes);
     }
     
     // 检查是否应该开始长休息
@@ -450,7 +492,8 @@ function switchMode(mode) {
   // 更新显示
   updateDisplay();
   updateTimerRing();
-  
+  sendOverlayUpdate();
+
   log('切换模式: ' + mode);
 }
 
@@ -479,14 +522,27 @@ function updateDisplay() {
   const minutes = Math.floor(state.timeLeft / 60);
   const seconds = state.timeLeft % 60;
   elements.timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  
+
   // 更新标签
   const labels = {
     focus: '专注时间',
     shortBreak: '短休息',
     longBreak: '长休息'
   };
-  elements.timerLabel.textContent = labels[state.mode];
+
+  if (elements.timerLabelInput.style.display === 'block') {
+    return;
+  }
+
+  if (state.mode === 'focus') {
+    elements.timerLabel.textContent = state.taskName || labels.focus;
+    elements.timerLabel.title = state.isRunning ? '' : '点击设置当前任务';
+    elements.timerLabel.style.cursor = state.isRunning ? 'default' : 'pointer';
+  } else {
+    elements.timerLabel.textContent = labels[state.mode];
+    elements.timerLabel.title = '';
+    elements.timerLabel.style.cursor = 'default';
+  }
 }
 
 function updateTimerRing() {
@@ -523,6 +579,23 @@ function updateTrayTooltip() {
   }
 }
 
+function sendOverlayUpdate() {
+  if (!window.electronAPI) return;
+  window.electronAPI.updateOverlay({
+    time: elements.timerDisplay.textContent,
+    progress: state.totalTime > 0 ? state.timeLeft / state.totalTime : 1,
+    mode: state.mode,
+    taskName: state.taskName
+  });
+}
+
+function sendOverlaySettings() {
+  if (!window.electronAPI) return;
+  window.electronAPI.updateOverlaySettings({
+    opacity: state.settings.overlayOpacity
+  });
+}
+
 function toggleSettings() {
   elements.settingsPanel.classList.toggle('expanded');
 }
@@ -549,8 +622,17 @@ function updateSetting(key, value) {
   }
   
   saveState();
+  if (key === 'overlayOpacity') sendOverlaySettings();
   log('设置已更新: ' + key + ' = ' + value);
 }
+  function updateOverlayOpacity(value) {
+    const pct = parseInt(value, 10);
+    state.settings.overlayOpacity = pct / 100;
+    if (elements.overlayOpacityValue) elements.overlayOpacityValue.textContent = pct + '%';
+    sendOverlaySettings();
+    saveState();
+  }
+
 
 function sanitizeNumericSetting(key, value) {
   const input = elements[key];
@@ -659,6 +741,38 @@ function showNotification(completedMode = state.mode, completedDurationMinutes =
       }
     });
   }
+}
+
+// ==================== 专注记录 ====================
+function recordFocusSession(durationMinutes) {
+  const session = {
+    id: Date.now(),
+    taskName: state.taskName || '未命名任务',
+    duration: durationMinutes,
+    completedAt: new Date().toISOString()
+  };
+  state.sessions.unshift(session);
+  if (state.sessions.length > 200) {
+    state.sessions.length = 200;
+  }
+}
+
+// ==================== 内联编辑 ====================
+function startEditingLabel() {
+  elements.timerLabel.style.display = 'none';
+  elements.timerLabelInput.style.display = 'block';
+  elements.timerLabelInput.value = state.taskName;
+  elements.timerLabelInput.placeholder = '输入任务名称...';
+  elements.timerLabelInput.focus();
+  elements.timerLabelInput.select();
+}
+
+function commitLabelEdit() {
+  elements.timerLabelInput.style.display = 'none';
+  elements.timerLabel.style.display = 'block';
+  state.taskName = elements.timerLabelInput.value.trim();
+  updateDisplay();
+  saveState();
 }
 
 // ==================== 日志 ====================
